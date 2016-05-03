@@ -1,0 +1,276 @@
+<phyloxml xmlns="http://www.phyloxml.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.phyloxml.org http://www.phyloxml.org/1.10/phyloxml.xsd">
+  <phylogeny rooted="true">
+    <clade>
+      <name>internal_1</name>
+      <branch_length>0</branch_length>
+      <confidence type="ambiguity">0</confidence>
+      <sequence>
+        <symbol>A</symbol>
+        <accession source="">internal_1_A</accession>
+        <name>1111111111111111111111</name>
+        <mol_seq is_aligned="false">.</mol_seq>
+      </sequence>
+      <sequence>
+        <symbol>B</symbol>
+        <accession source="">internal_1_B</accession>
+        <name>1111111111111111111111</name>
+        <mol_seq is_aligned="false">.</mol_seq>
+      </sequence>
+      <clade>
+        <name>primary</name>
+        <branch_length>2.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">primary_A</accession>
+          <name>1111222212211111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">primary_B</accession>
+          <name>1111111111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+      </clade>
+      <clade>
+        <name>internal_2</name>
+        <branch_length>1.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">internal_2_A</accession>
+          <name>1111111111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">internal_2_B</accession>
+          <name>1111101111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <clade>
+          <name>X498D</name>
+          <branch_length>0.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">X498D_A</accession>
+            <name>1111111111111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <sequence>
+            <symbol>B</symbol>
+            <accession source="">X498D_B</accession>
+            <name>1111101111111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+        </clade>
+        <clade>
+          <name>internal_3</name>
+          <branch_length>1.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">internal_3_A</accession>
+            <name>1111111111111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <sequence>
+            <symbol>B</symbol>
+            <accession source="">internal_3_B</accession>
+            <name>1110000000011111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <clade>
+            <name>internal_4</name>
+            <branch_length>1.0</branch_length>
+            <confidence type="ambiguity">0</confidence>
+            <sequence>
+              <symbol>A</symbol>
+              <accession source="">internal_4_A</accession>
+              <name>2222222222222222222222</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <sequence>
+              <symbol>B</symbol>
+              <accession source="">internal_4_B</accession>
+              <name>1110000000011111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <clade>
+              <name>internal_5</name>
+              <branch_length>0.0</branch_length>
+              <confidence type="ambiguity">0</confidence>
+              <sequence>
+                <symbol>A</symbol>
+                <accession source="">internal_5_A</accession>
+                <name>2222222222222222222222</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+              <sequence>
+                <symbol>B</symbol>
+                <accession source="">internal_5_B</accession>
+                <name>1110000000011111111111</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+              <clade>
+                <name>internal_6</name>
+                <branch_length>0.0</branch_length>
+                <confidence type="ambiguity">0</confidence>
+                <sequence>
+                  <symbol>A</symbol>
+                  <accession source="">internal_6_A</accession>
+                  <name>2222222222222222222222</name>
+                  <mol_seq is_aligned="false">.</mol_seq>
+                </sequence>
+                <sequence>
+                  <symbol>B</symbol>
+                  <accession source="">internal_6_B</accession>
+                  <name>1110000000011111111111</name>
+                  <mol_seq is_aligned="false">.</mol_seq>
+                </sequence>
+                <clade>
+                  <name>internal_7</name>
+                  <branch_length>0.0</branch_length>
+                  <confidence type="ambiguity">0</confidence>
+                  <sequence>
+                    <symbol>A</symbol>
+                    <accession source="">internal_7_A</accession>
+                    <name>2222222222222222222222</name>
+                    <mol_seq is_aligned="false">.</mol_seq>
+                  </sequence>
+                  <sequence>
+                    <symbol>B</symbol>
+                    <accession source="">internal_7_B</accession>
+                    <name>1110000000011111111111</name>
+                    <mol_seq is_aligned="false">.</mol_seq>
+                  </sequence>
+                  <clade>
+                    <name>metc</name>
+                    <branch_length>0.0</branch_length>
+                    <confidence type="ambiguity">0</confidence>
+                    <sequence>
+                      <symbol>A</symbol>
+                      <accession source="">metc_A</accession>
+                      <name>2222222222222222222222</name>
+                      <mol_seq is_aligned="false">.</mol_seq>
+                    </sequence>
+                    <sequence>
+                      <symbol>B</symbol>
+                      <accession source="">metc_B</accession>
+                      <name>1110000000011111111111</name>
+                      <mol_seq is_aligned="false">.</mol_seq>
+                    </sequence>
+                  </clade>
+                  <clade>
+                    <name>recurrance</name>
+                    <branch_length>0.0</branch_length>
+                    <confidence type="ambiguity">0</confidence>
+                    <sequence>
+                      <symbol>A</symbol>
+                      <accession source="">recurrance_A</accession>
+                      <name>2222222222222222222222</name>
+                      <mol_seq is_aligned="false">.</mol_seq>
+                    </sequence>
+                    <sequence>
+                      <symbol>B</symbol>
+                      <accession source="">recurrance_B</accession>
+                      <name>1110000000011111111111</name>
+                      <mol_seq is_aligned="false">.</mol_seq>
+                    </sequence>
+                  </clade>
+                </clade>
+                <clade>
+                  <name>metft</name>
+                  <branch_length>0.0</branch_length>
+                  <confidence type="ambiguity">0</confidence>
+                  <sequence>
+                    <symbol>A</symbol>
+                    <accession source="">metft_A</accession>
+                    <name>2222222222222222222222</name>
+                    <mol_seq is_aligned="false">.</mol_seq>
+                  </sequence>
+                  <sequence>
+                    <symbol>B</symbol>
+                    <accession source="">metft_B</accession>
+                    <name>1110000000011111111111</name>
+                    <mol_seq is_aligned="false">.</mol_seq>
+                  </sequence>
+                </clade>
+              </clade>
+              <clade>
+                <name>meta</name>
+                <branch_length>1.0</branch_length>
+                <confidence type="ambiguity">0</confidence>
+                <sequence>
+                  <symbol>A</symbol>
+                  <accession source="">meta_A</accession>
+                  <name>2222222222222222222222</name>
+                  <mol_seq is_aligned="false">.</mol_seq>
+                </sequence>
+                <sequence>
+                  <symbol>B</symbol>
+                  <accession source="">meta_B</accession>
+                  <name>0000000000000000000000</name>
+                  <mol_seq is_aligned="false">.</mol_seq>
+                </sequence>
+              </clade>
+            </clade>
+            <clade>
+              <name>X498C1</name>
+              <branch_length>1.0</branch_length>
+              <confidence type="ambiguity">0</confidence>
+              <sequence>
+                <symbol>A</symbol>
+                <accession source="">X498C1_A</accession>
+                <name>2222222222222222222222</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+              <sequence>
+                <symbol>B</symbol>
+                <accession source="">X498C1_B</accession>
+                <name>2220000000022222222222</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+            </clade>
+          </clade>
+          <clade>
+            <name>X498C2</name>
+            <branch_length>0.0</branch_length>
+            <confidence type="ambiguity">0</confidence>
+            <sequence>
+              <symbol>A</symbol>
+              <accession source="">X498C2_A</accession>
+              <name>1111111111111111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <sequence>
+              <symbol>B</symbol>
+              <accession source="">X498C2_B</accession>
+              <name>1110000000011111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+          </clade>
+        </clade>
+      </clade>
+      <clade>
+        <name>diploid</name>
+        <branch_length>0.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">diploid_A</accession>
+          <name>1111111111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">diploid_B</accession>
+          <name>1111111111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+      </clade>
+    </clade>
+  </phylogeny>
+</phyloxml>

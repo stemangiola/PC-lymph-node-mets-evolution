@@ -1,0 +1,106 @@
+<phyloxml xmlns="http://www.phyloxml.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.phyloxml.org http://www.phyloxml.org/1.10/phyloxml.xsd">
+  <phylogeny rooted="true">
+    <clade>
+      <name>internal_1</name>
+      <branch_length>0</branch_length>
+      <confidence type="ambiguity">0</confidence>
+      <sequence>
+        <symbol>A</symbol>
+        <accession source="">internal_1_A</accession>
+        <name>1111111111111</name>
+        <mol_seq is_aligned="false">.</mol_seq>
+      </sequence>
+      <sequence>
+        <symbol>B</symbol>
+        <accession source="">internal_1_B</accession>
+        <name>1111110111111</name>
+        <mol_seq is_aligned="false">.</mol_seq>
+      </sequence>
+      <clade>
+        <name>internal_2</name>
+        <branch_length>0.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">internal_2_A</accession>
+          <name>1111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">internal_2_B</accession>
+          <name>1111110111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <clade>
+          <name>X177iM</name>
+          <branch_length>0.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">X177iM_A</accession>
+            <name>1111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <sequence>
+            <symbol>B</symbol>
+            <accession source="">X177iM_B</accession>
+            <name>1111110111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+        </clade>
+        <clade>
+          <name>X177aT</name>
+          <branch_length>0.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">X177aT_A</accession>
+            <name>1111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <sequence>
+            <symbol>B</symbol>
+            <accession source="">X177aT_B</accession>
+            <name>1111110111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+        </clade>
+      </clade>
+      <clade>
+        <name>X177cM</name>
+        <branch_length>1.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">X177cM_A</accession>
+          <name>1111111111122</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">X177cM_B</accession>
+          <name>1111110111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+      </clade>
+      <clade>
+        <name>diploid</name>
+        <branch_length>1.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">diploid_A</accession>
+          <name>1111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">diploid_B</accession>
+          <name>1111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+      </clade>
+    </clade>
+  </phylogeny>
+</phyloxml>

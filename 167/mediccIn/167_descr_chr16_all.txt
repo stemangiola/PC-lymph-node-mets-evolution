@@ -1,0 +1,1 @@
+chr_16 167_chr16_major.fasta 167_chr16_minor.fasta

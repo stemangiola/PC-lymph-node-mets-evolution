@@ -1,0 +1,242 @@
+<phyloxml xmlns="http://www.phyloxml.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.phyloxml.org http://www.phyloxml.org/1.10/phyloxml.xsd">
+  <phylogeny rooted="true">
+    <clade>
+      <name>internal_1</name>
+      <branch_length>0</branch_length>
+      <confidence type="ambiguity">0</confidence>
+      <sequence>
+        <symbol>A</symbol>
+        <accession source="">internal_1_A</accession>
+        <name>111111111111111</name>
+        <mol_seq is_aligned="false">.</mol_seq>
+      </sequence>
+      <sequence>
+        <symbol>B</symbol>
+        <accession source="">internal_1_B</accession>
+        <name>111111111111111</name>
+        <mol_seq is_aligned="false">.</mol_seq>
+      </sequence>
+      <clade>
+        <name>internal_2</name>
+        <branch_length>1.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">internal_2_A</accession>
+          <name>111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">internal_2_B</accession>
+          <name>111011111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <clade>
+          <name>X179_F1</name>
+          <branch_length>0.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">X179_F1_A</accession>
+            <name>111111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <sequence>
+            <symbol>B</symbol>
+            <accession source="">X179_F1_B</accession>
+            <name>111011111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+        </clade>
+        <clade>
+          <name>X179F_2</name>
+          <branch_length>1.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">X179F_2_A</accession>
+            <name>111111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <sequence>
+            <symbol>B</symbol>
+            <accession source="">X179F_2_B</accession>
+            <name>000011111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+        </clade>
+      </clade>
+      <clade>
+        <name>internal_3</name>
+        <branch_length>0.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">internal_3_A</accession>
+          <name>111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">internal_3_B</accession>
+          <name>111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <clade>
+          <name>internal_4</name>
+          <branch_length>0.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">internal_4_A</accession>
+            <name>111111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <sequence>
+            <symbol>B</symbol>
+            <accession source="">internal_4_B</accession>
+            <name>111111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <clade>
+            <name>X179G</name>
+            <branch_length>0.0</branch_length>
+            <confidence type="ambiguity">0</confidence>
+            <sequence>
+              <symbol>A</symbol>
+              <accession source="">X179G_A</accession>
+              <name>111111111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <sequence>
+              <symbol>B</symbol>
+              <accession source="">X179G_B</accession>
+              <name>111111111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+          </clade>
+          <clade>
+            <name>internal_6</name>
+            <branch_length>0.0</branch_length>
+            <confidence type="ambiguity">0</confidence>
+            <sequence>
+              <symbol>A</symbol>
+              <accession source="">internal_6_A</accession>
+              <name>111111111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <sequence>
+              <symbol>B</symbol>
+              <accession source="">internal_6_B</accession>
+              <name>111111111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <clade>
+              <name>X179C</name>
+              <branch_length>0.0</branch_length>
+              <confidence type="ambiguity">0</confidence>
+              <sequence>
+                <symbol>A</symbol>
+                <accession source="">X179C_A</accession>
+                <name>111111111111111</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+              <sequence>
+                <symbol>B</symbol>
+                <accession source="">X179C_B</accession>
+                <name>111111111111111</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+            </clade>
+            <clade>
+              <name>X179D</name>
+              <branch_length>0.0</branch_length>
+              <confidence type="ambiguity">0</confidence>
+              <sequence>
+                <symbol>A</symbol>
+                <accession source="">X179D_A</accession>
+                <name>111111111111111</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+              <sequence>
+                <symbol>B</symbol>
+                <accession source="">X179D_B</accession>
+                <name>111111111111111</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+            </clade>
+          </clade>
+        </clade>
+        <clade>
+          <name>internal_5</name>
+          <branch_length>1.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">internal_5_A</accession>
+            <name>111111111111111</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <sequence>
+            <symbol>B</symbol>
+            <accession source="">internal_5_B</accession>
+            <name>111111111111110</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <clade>
+            <name>X179L</name>
+            <branch_length>1.0</branch_length>
+            <confidence type="ambiguity">0</confidence>
+            <sequence>
+              <symbol>A</symbol>
+              <accession source="">X179L_A</accession>
+              <name>111111111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <sequence>
+              <symbol>B</symbol>
+              <accession source="">X179L_B</accession>
+              <name>111111111110000</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+          </clade>
+          <clade>
+            <name>X179E</name>
+            <branch_length>0.0</branch_length>
+            <confidence type="ambiguity">0</confidence>
+            <sequence>
+              <symbol>A</symbol>
+              <accession source="">X179E_A</accession>
+              <name>111111111111111</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <sequence>
+              <symbol>B</symbol>
+              <accession source="">X179E_B</accession>
+              <name>111111111111110</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+          </clade>
+        </clade>
+      </clade>
+      <clade>
+        <name>diploid</name>
+        <branch_length>0.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">diploid_A</accession>
+          <name>111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <sequence>
+          <symbol>B</symbol>
+          <accession source="">diploid_B</accession>
+          <name>111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+      </clade>
+    </clade>
+  </phylogeny>
+</phyloxml>

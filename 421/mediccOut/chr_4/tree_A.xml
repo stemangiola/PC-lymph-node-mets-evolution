@@ -1,0 +1,180 @@
+<phyloxml xmlns="http://www.phyloxml.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.phyloxml.org http://www.phyloxml.org/1.10/phyloxml.xsd">
+  <phylogeny rooted="true">
+    <clade>
+      <name>internal_1</name>
+      <branch_length>0</branch_length>
+      <confidence type="ambiguity">6</confidence>
+      <sequence>
+        <symbol>A</symbol>
+        <accession source="">internal_1_A</accession>
+        <name>111111111111111112222222222222222222222</name>
+        <mol_seq is_aligned="false">.</mol_seq>
+      </sequence>
+      <clade>
+        <name>internal_2</name>
+        <branch_length>1.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">internal_2_A</accession>
+          <name>111111111111111111111112222222222222222</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+        <clade>
+          <name>internal_3</name>
+          <branch_length>0.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">internal_3_A</accession>
+            <name>111111111111111111111112222222222222222</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+          <clade>
+            <name>X421C</name>
+            <branch_length>5.0</branch_length>
+            <confidence type="ambiguity">0</confidence>
+            <sequence>
+              <symbol>A</symbol>
+              <accession source="">X421C_A</accession>
+              <name>223223322223322222222224444444444444444</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+          </clade>
+          <clade>
+            <name>internal_4</name>
+            <branch_length>0.0</branch_length>
+            <confidence type="ambiguity">0</confidence>
+            <sequence>
+              <symbol>A</symbol>
+              <accession source="">internal_4_A</accession>
+              <name>111111111111111111111112222222222222222</name>
+              <mol_seq is_aligned="false">.</mol_seq>
+            </sequence>
+            <clade>
+              <name>X421L</name>
+              <branch_length>0.0</branch_length>
+              <confidence type="ambiguity">0</confidence>
+              <sequence>
+                <symbol>A</symbol>
+                <accession source="">X421L_A</accession>
+                <name>111111111111111111111112222222222222222</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+            </clade>
+            <clade>
+              <name>internal_5</name>
+              <branch_length>0.0</branch_length>
+              <confidence type="ambiguity">0</confidence>
+              <sequence>
+                <symbol>A</symbol>
+                <accession source="">internal_5_A</accession>
+                <name>111111111111111111111112222222222222222</name>
+                <mol_seq is_aligned="false">.</mol_seq>
+              </sequence>
+              <clade>
+                <name>X421H</name>
+                <branch_length>1.0</branch_length>
+                <confidence type="ambiguity">0</confidence>
+                <sequence>
+                  <symbol>A</symbol>
+                  <accession source="">X421H_A</accession>
+                  <name>111111111111111111111111111111111111111</name>
+                  <mol_seq is_aligned="false">.</mol_seq>
+                </sequence>
+              </clade>
+              <clade>
+                <name>internal_6</name>
+                <branch_length>0.0</branch_length>
+                <confidence type="ambiguity">12</confidence>
+                <sequence>
+                  <symbol>A</symbol>
+                  <accession source="">internal_6_A</accession>
+                  <name>111111111111111111111112222222222222222</name>
+                  <mol_seq is_aligned="false">.</mol_seq>
+                </sequence>
+                <clade>
+                  <name>X421F</name>
+                  <branch_length>0.0</branch_length>
+                  <confidence type="ambiguity">0</confidence>
+                  <sequence>
+                    <symbol>A</symbol>
+                    <accession source="">X421F_A</accession>
+                    <name>111111111111111111111112222222222222222</name>
+                    <mol_seq is_aligned="false">.</mol_seq>
+                  </sequence>
+                </clade>
+                <clade>
+                  <name>internal_7</name>
+                  <branch_length>1.0</branch_length>
+                  <confidence type="ambiguity">5</confidence>
+                  <sequence>
+                    <symbol>A</symbol>
+                    <accession source="">internal_7_A</accession>
+                    <name>111111111111111111111112222111111111111</name>
+                    <mol_seq is_aligned="false">.</mol_seq>
+                  </sequence>
+                  <clade>
+                    <name>X421G</name>
+                    <branch_length>3.0</branch_length>
+                    <confidence type="ambiguity">0</confidence>
+                    <sequence>
+                      <symbol>A</symbol>
+                      <accession source="">X421G_A</accession>
+                      <name>001101111111111111111111111111111111111</name>
+                      <mol_seq is_aligned="false">.</mol_seq>
+                    </sequence>
+                  </clade>
+                  <clade>
+                    <name>X421E</name>
+                    <branch_length>1.0</branch_length>
+                    <confidence type="ambiguity">0</confidence>
+                    <sequence>
+                      <symbol>A</symbol>
+                      <accession source="">X421E_A</accession>
+                      <name>111111111111111111111112222111111111112</name>
+                      <mol_seq is_aligned="false">.</mol_seq>
+                    </sequence>
+                  </clade>
+                </clade>
+              </clade>
+            </clade>
+          </clade>
+        </clade>
+        <clade>
+          <name>X421D</name>
+          <branch_length>1.0</branch_length>
+          <confidence type="ambiguity">0</confidence>
+          <sequence>
+            <symbol>A</symbol>
+            <accession source="">X421D_A</accession>
+            <name>111111111111111111111112222222222211122</name>
+            <mol_seq is_aligned="false">.</mol_seq>
+          </sequence>
+        </clade>
+      </clade>
+      <clade>
+        <name>X421B</name>
+        <branch_length>4.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">X421B_A</accession>
+          <name>222222220222111112222222222233333332333</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+      </clade>
+      <clade>
+        <name>diploid</name>
+        <branch_length>1.0</branch_length>
+        <confidence type="ambiguity">0</confidence>
+        <sequence>
+          <symbol>A</symbol>
+          <accession source="">diploid_A</accession>
+          <name>111111111111111111111111111111111111111</name>
+          <mol_seq is_aligned="false">.</mol_seq>
+        </sequence>
+      </clade>
+    </clade>
+  </phylogeny>
+</phyloxml>

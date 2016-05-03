@@ -1,0 +1,36 @@
+<phyloxml xmlns="http://www.phyloxml.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.phyloxml.org http://www.phyloxml.org/1.10/phyloxml.xsd">
+  <phylogeny rooted="false">
+    <clade>
+      <name>internal_1</name>
+      <branch_length>1.0</branch_length>
+      <clade>
+        <name>X001Cancer</name>
+        <branch_length>122.49774</branch_length>
+      </clade>
+      <clade>
+        <name>internal_2</name>
+        <branch_length>11.14576</branch_length>
+        <clade>
+          <name>X001bM</name>
+          <branch_length>26.53502</branch_length>
+        </clade>
+        <clade>
+          <name>internal_3</name>
+          <branch_length>20.35045</branch_length>
+          <clade>
+            <name>X001gM</name>
+            <branch_length>11.38239</branch_length>
+          </clade>
+          <clade>
+            <name>X001aT</name>
+            <branch_length>31.61761</branch_length>
+          </clade>
+        </clade>
+      </clade>
+      <clade>
+        <name>diploid</name>
+        <branch_length>38.50226</branch_length>
+      </clade>
+    </clade>
+  </phylogeny>
+</phyloxml>

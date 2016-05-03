@@ -1,0 +1,1267 @@
+---
+title: "analyses_lymph_phylogenies"
+author: "Stefano Mangiola et al."
+date: "25/04/2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import libraries
+
+
+```{r, message=F, warning=F}
+library(knitr)
+library(ctv)
+library(ape)
+library(geiger)
+library(phytools)
+library(ggplot2)
+library(reshape)
+library(XML)
+library(plyr)
+library(pheatmap) 
+library(Hmisc)
+library(parallel)
+library(limma)
+library(pixmap)
+#install.packages("~/lymphNode_study/MLPAstats_0.5-9.tar.gz", repos = NULL, type = "source")
+library(MLPAstats)
+```
+
+## Define functions
+
+```{r, message=F, warning=F}
+patient2cn <- function(myDir){
+  ################################################################
+  #This function loop all the files of copy number variation produced by ASCAT and create the CNV table of all samples
+  ################################################################
+  cnAll <- data.frame()
+  files <- dir(".", pattern = "Out.RData", full.names = TRUE,  ignore.case = TRUE)
+  for(f in files)
+  {
+    load(f)
+    
+    #fileIn <- paste(gsub("Out.RData", "", f), "In.RData", sep="")
+    #load(fileIn)
+    
+    #save(ascat.bc, file = paste(names(ascat.output$aberrantcellfraction), "ascatIn.RData", sep=""))
+    #ascat.output =ascat.runAscat(ascat.bc)
+    #save(ascat.output, file = paste(names(ascat.output$aberrantcellfraction), "ascatOut.RData", sep=""))
+    
+    myDf <- ascat.output$segments_raw    
+    
+    cnAll <- rbind(cnAll, myDf)
+    #ascat.plotSegmentedData(ascat.bc)
+  }
+  
+  #CAP everything with more than capValue CN to capValue - MEDICC does not allow for > 4
+  capValue <- 4
+  cnAll[cnAll$nMajor > capValue,"nMajor"] <- capValue
+  cnAll[cnAll$nMinor> capValue,"nMinor"] <- capValue
+  
+  return(cnAll)
+}
+
+cn2files <- function(patient, cnAll, dir, cutoff, bootstrap = FALSE, doWrite, chrX){
+  
+  ################################################################
+  #This function: (i) frgment the genome according to all samples CNV; and (ii) produces the files needed for MEDICC to infer the trees
+  ################################################################
+  #process CNV
+  if(doWrite) {
+    chromosomes <- unique(cnAll$chr)
+    #chromosomes <- unique(cnAll[cnAll$chr!="X" & cnAll$chr!="Y", "chr"])
+    if (patient==498) chromosomes <- chromosomes[!(chromosomes%in%c(10, 18))]
+    #if (patient==299) chromosomes <- chromosomes[!(chromosomes%in%c(18))]
+    if (patient==177) chromosomes <- chromosomes[!(chromosomes%in%c(8))]
+  }
+  else chromosomes <- unique(cnAll[cnAll$chr!="Y", "chr"])
+  
+  
+  samples <- unique(cnAll$sample)
+  alleles <- data.frame()
+  for (chr in chromosomes){
+    myCn <- cnAll[cnAll$chr==chr,]
+    myAlleles <- data.frame()
+    starts <- sort(unique(myCn$startpos))
+    
+    #loop alleles
+    for (s in 1:length(starts)){
+      if(dim(myCn[myCn$startpos<=starts[s] & myCn$endpos>=starts[s],])[1] == length(samples)) {
+        #copy in temporary allele table
+        myAlleles <- 
+          rbind(
+            myAlleles, 
+            data.frame(
+              alleleStart=starts[s], 
+              alleleEnd=starts[s+1], 
+              myCn[myCn$startpos<=starts[s] & myCn$endpos>=starts[s],]
+            )
+          )    
+      }
+    }
+    
+    #maxStart <- max(myAlleles[myAlleles$chr==chr,"alleleStart"])
+    maxEnd <- unique(max(myAlleles$endpos))
+    #this if is because some chromosomes have length 1
+    if(length(is.na(myAlleles$alleleEnd))>0)
+      myAlleles[is.na(myAlleles$alleleEnd),"alleleEnd"] <- maxEnd
+    
+    #eliminate short (< 500.000bp) fragments
+    myAlleles <- myAlleles[myAlleles$alleleEnd - myAlleles$alleleStart > cutoff,]
+    
+    #copy in main allele table
+    alleles <- rbind(alleles, myAlleles)
+  }
+  
+  #bootstrap resampling
+  if(bootstrap!=FALSE){
+    if(bootstrap=="resampling"){
+      allelesBootstrap <- data.frame()
+      newRegions <- unique(alleles[,c("chr", "alleleStart")])
+      newRegions <- newRegions[sample(nrow(newRegions), replace=TRUE, dim(newRegions)[1]),]
+      for (i in 1:dim(newRegions)[1]){
+        region <- newRegions[i,]
+        allelesBootstrap <- rbind(allelesBootstrap, alleles[alleles$chr==region$chr & alleles$alleleStart==region$alleleStart,])
+      }
+      alleles <- allelesBootstrap
+    }
+    else if(bootstrap=="leave-out"){
+      chromosomes <- sample(chromosomes, size=length(chromosomes)*2/3)
+    }
+    #define directories
+    dirIn <- file.path(dir, paste("BOOT_", gsub("[-: ]", "", Sys.time()), sep=""))
+    dirOut <- file.path(dir, paste("BOOT_", gsub("[-: ]", "", Sys.time()), sep=""))
+  } 
+  else { 
+    dirIn <- file.path(dir, "mediccIn")
+    dirOut <- file.path(dir, "mediccOut")    
+  }
+  #create directories
+  dir.create(dirIn, showWarnings = FALSE)
+  dir.create(dirOut, showWarnings = FALSE)  
+  
+  #Create files
+  if(doWrite == TRUE){
+    for(chr in chromosomes){
+      
+      print(chr)
+      myAlleles <- alleles[alleles$chr==chr,]
+      outputMaj <- 
+        c(">diploid", paste(rep(1, length(myAlleles[myAlleles$sample==samples[1],1])), collapse=""))
+      
+      outputMin <- 
+        c(">diploid", paste(rep(1, length(myAlleles[myAlleles$sample==samples[1],1])), collapse=""))
+      
+      #loop samples
+      for(s in samples){
+        #added for testing purpose
+        #if(!grepl("M",s)){
+        outputMaj <- c(
+          outputMaj,  
+          sprintf(">%s", s),
+          paste(myAlleles[myAlleles$sample==s,"nMajor"], collapse="")
+          
+        )
+        outputMin <- c(
+          outputMin,  
+          sprintf(">%s", s),
+          paste(myAlleles[myAlleles$sample==s,"nMinor"], collapse="")
+        )
+        
+      }
+      #}
+      
+      #add diploid sample        
+      fileMaj <- file(sprintf("%s/%s_chr%s_major.fasta", dirIn, patient, chr))
+      writeLines(outputMaj, fileMaj)
+      close(fileMaj)
+      
+      fileMin <- file(sprintf("%s/%s_chr%s_minor.fasta", dirIn, patient, chr))
+      writeLines(outputMin, fileMin)
+      close(fileMin)    
+      
+      #################################
+      ###Write test dir################
+      #################################
+      #create directories
+      dir.test <- file.path(dir, paste("TEST_", chr, sep=""), sep="")      
+      dirIn.test <- file.path(dir.test, "mediccIn")
+      dirOut.test <- file.path(dir.test, "mediccOut")     
+      dir.create(dir.test, showWarnings = FALSE)
+      dir.create(dirIn.test, showWarnings = FALSE)
+      dir.create(dirOut.test, showWarnings = FALSE)  
+      
+      #add diploid sample        
+      fileMaj <- file(sprintf("%s/%s_chr%s_major.fasta", dirIn.test, patient, chr))
+      writeLines(outputMaj, fileMaj)
+      close(fileMaj)
+      
+      fileMin <- file(sprintf("%s/%s_chr%s_minor.fasta", dirIn.test, patient, chr))
+      writeLines(outputMin, fileMin)
+      close(fileMin) 
+      
+      #################################
+      #################################
+      
+    }
+    
+    #create description file needed for medicc
+    descr <- c()
+    
+    for (chr in chromosomes){
+      descr <- 
+        c(
+          descr, 
+          sprintf("chr_%s %s_chr%s_major.fasta %s_chr%s_minor.fasta", chr ,patient , chr, patient, chr)
+        ) 
+      
+      #################################
+      ###Write test dir################
+      #################################
+      dir.test <- file.path(dir, paste("TEST_", chr, sep=""), sep="")      
+      dirIn.test <- file.path(dir.test, "mediccIn")
+      filedescr <- file(sprintf("%s/%s_descr.txt", dirIn.test, patient))
+      writeLines(
+        sprintf(
+          "chr_%s %s_chr%s_major.fasta %s_chr%s_minor.fasta", 
+          chr ,patient , chr, patient, chr
+        ), 
+        filedescr
+      )
+      close(filedescr)
+      
+      #################################
+      #################################
+      
+    }
+    filedescr <- file(sprintf("%s/%s_descr.txt", dirIn, patient))
+    writeLines(descr, filedescr)
+    close(filedescr)
+    
+    
+    
+  }
+  return(alleles)
+}
+
+```
+
+## Format data
+
+```{r, message=F, warning=F}
+dir <- "167/"
+patient <- 167
+setwd(dir)
+cnAll167 <- patient2cn(".")
+cnAll167$patient = patient
+alleles167 <- cn2files(patient, cnAll167, ".", 500000, F, T)
+
+dir <- "../179/"
+patient <- 179
+setwd(dir)
+cnAll179 <- patient2cn(".")
+cnAll179$patient = patient
+alleles179 <- cn2files(patient, cnAll179, ".", 500000, F, T)
+
+dir <- "../421/"
+patient <- 421
+setwd(dir)
+cnAll421 <- patient2cn(".")
+cnAll421$patient = patient
+alleles421 <- cn2files(patient, cnAll421, ".", 500000, F, T)
+
+dir <- "../001/"
+patient <- 001
+setwd(dir)
+cnAll001 <- patient2cn(".")
+cnAll001$patient = patient
+alleles001 <- cn2files(patient, cnAll001, ".", 500000, F, T)
+
+dir <- "../498/"
+patient <- 498
+setwd(dir)
+cnAll498 <- patient2cn(".")
+cnAll498$patient = patient
+cnAll498_minus <- cnAll498[!(cnAll498$sample %in% c("X498C3")), ]
+cnAll498 <- cnAll498_minus
+alleles498 <- cn2files(patient, cnAll498_minus, ".", 500000, F, T)
+
+dir <- "../299/"
+patient <- 299
+setwd(dir)
+cnAll299 <- patient2cn(".")
+cnAll299$patient = patient
+alleles299 <- cn2files(patient, cnAll299, ".", 500000, F, F)
+cnAll299_minus <- cnAll299[!(cnAll299$sample %in% c("primary")), ]
+cnAll299 <- cnAll299_minus
+alleles299 <- cn2files(patient, cnAll299_minus, ".", 500000, F, T)
+
+dir <- "../177/"
+patient <- 177
+setwd(dir)
+cnAll177 <- patient2cn(".")
+cnAll177$patient = patient
+alleles177 <- cn2files(patient, cnAll177, ".", 500000, F, T)
+
+setwd("../")
+```
+
+
+## Plot heatmap
+
+```{r}
+#Get shared consistent genome regions
+cn_4_heat <- rbind(
+  cnAll167,
+  cnAll179,
+  cnAll421,
+  cnAll001,
+  cnAll498,
+  cnAll299,
+  cnAll177
+)
+
+cn_4_heat.merged <- cn2files("all", cn_4_heat, ".", 500000, F, F)
+cn_4_heat.merged$alleleStart <- factor(cn_4_heat.merged$alleleStart, sort(unique(cn_4_heat.merged$alleleStart)))
+cn_4_heat.merged$chr <- factor(cn_4_heat.merged$chr, levels=c(na.omit(unique(as.numeric(cn_4_heat.merged$chr))), "X"))
+quantile_range <- c(0,1,2,3,4, 5, 6, 7, 8)
+#color_palette <- colorRampPalette(c("#3794bf", "#FFFFFF", "#ef4836"))(length(quantile_range) )
+color_palette = c("#3794BF", "#9BC9DF","#FFFFFF", "#FCE0DD", "#F9C2BC", "#F7A39A", "#F48579", "#F16657", "#EF4836")
+ggplot(cn_4_heat.merged, aes(x = as.factor(alleleStart), y=sample, fill=factor(nMajor + nMinor))) + 
+geom_tile() + 
+     facet_grid(patient~chr, space="free", scale="free") +
+  scale_fill_manual(values = color_palette, name = "", labels = c(0, 1, 2, 3, 4, 5, 6, 7, 8)) +
+  theme(axis.line.x=element_blank(),axis.text.x=element_blank(),
+       axis.ticks.x=element_blank(),
+        axis.title.x=element_blank(),
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank())
+```
+
+
+## Run MEDICC
+
+```
+medicc.py 001/mediccIn/001_descr.txt 001/med3iccOut
+medicc.py 167/mediccIn/167_descr.txt 167/mediccOut
+medicc.py 177/mediccIn/177_descr.txt 177/mediccOut
+medicc.py 179/mediccIn/179_descr.txt 179/mediccOut
+medicc.py 299/mediccIn/299_descr.txt 299/mediccOut
+medicc.py 421/mediccIn/421_descr.txt 421/mediccOut
+medicc.py 489/mediccIn/489_descr.txt 489/mediccOut
+
+```
+
+## Define functions
+
+```{r, message=F, warning=F}
+readCN <- function(myDir){
+  #load all CNV in a table
+  myFiles <- dir(myDir, pattern = "Out.RData", full.names = TRUE,  ignore.case = TRUE, recursive = TRUE)
+  cnAll <- 
+    do.call("rbind", lapply(myFiles, function(myFile){
+      load(myFile)
+      myDf <- ascat.output$segments_raw 
+      #cap values
+      myDf$nMajor[myDf$nMajor>4] <- 4 
+      myDf$nMinor[myDf$nMinor>4] <- 4 
+      myDf$sample <- myFile      
+      myDf
+    }))  
+  return(cnAll)
+}
+
+mergeCN <- function(cnAll, cutoff){
+  patient <- unique(cnAll$patient)
+  samples <- unique(cnAll$sample)
+  alleles <- data.frame()
+  for (chr in unique(cnAll$chr)){
+    myCn <- cnAll[cnAll$chr==chr,]
+    myAlleles <- data.frame()
+    starts <- sort(unique(myCn$startpos))
+    
+    #loop alleles
+    for (s in 1:length(starts)){
+      if(dim(myCn[myCn$startpos<=starts[s] & myCn$endpos>=starts[s],])[1] == length(samples)) {
+        #copy in temporary allele table
+        myAlleles <- 
+          rbind(
+            myAlleles, 
+            data.frame(
+              alleleStart=starts[s], 
+              alleleEnd=starts[s+1], 
+              myCn[myCn$startpos<=starts[s] & myCn$endpos>=starts[s],]
+            )
+          )    
+      }
+    }
+    
+    maxEnd <- unique(max(myAlleles$endpos))
+    
+    #this if is because some chromosomes have length 1
+    if(length(is.na(myAlleles$alleleEnd))>0) myAlleles[is.na(myAlleles$alleleEnd),"alleleEnd"] <- maxEnd
+    
+    #eliminate short (< 500.000bp) fragments
+    myAlleles <- myAlleles[myAlleles$alleleEnd - myAlleles$alleleStart > cutoff,]
+    
+    #copy in main allele table
+    alleles <- rbind(alleles, myAlleles)
+  }
+  
+  return(alleles)
+}
+
+```
+
+## Import phylogenies
+
+```{r, message=F, warning=F}
+#Read all files
+cnAll.merged <- 
+  do.call("rbind", 
+    lapply(
+      c("001", "167", "177", "179", "299", "421", "498"), 
+      function(p){
+        print(p)
+        cnAll <- readCN(paste("./", p, sep=""))
+        cnAll$patient <- sapply(cnAll$sample, function(sm){ strsplit(sm, "/", fixed=T)[[1]][2]})
+        cnAll$sample <- sapply(cnAll$sample, function(sm){ 
+          sm <- strsplit(sm, "/", fixed=T)[[1]][3]
+          sm <- gsub("(X[0-9]{3})*", "", sm)
+          sm <- gsub("(ascatOut)?.RData", "", sm)
+        }) 
+        
+        #eliminate 498 C3 sample
+        if(p==498) mergeCN(subset(cnAll, sample!="C3"), 500000) 
+        else if(p==299){          
+            #all this because the metastatic sample has different density that would increase the number of fragments that would deteriorate the statistics
+          xx=mergeCN(subset(cnAll, sample!="met"), 500000)
+          xx <- xx[order(xx$startpos),]
+          xx <- xx[xx$sample=="B",]
+          yy=subset(cnAll, sample=="met")
+          yy <- yy[order(yy$startpos),]
+
+          myDf <- do.call("rbind", lapply(1:dim(xx)[1], function(idx){
+            cat(".")
+            cn.mean = colMeans(do.call("rbind", lapply(seq(xx[idx,"alleleStart"],xx[idx,"alleleEnd"], 1000), function(bp){ 
+              bp.cn <- subset(yy, chr==xx[idx,"chr"] & startpos<=bp & endpos>=bp)
+              if(dim(bp.cn)[1]>0) bp.cn[,c("nMajor", "nMinor")]
+            })))
+            
+            myRow <-  xx[idx,]
+            myRow$sample <- "met"
+            myRow$nMajor <- cn.mean[1]
+            myRow$nMinor <- cn.mean[2]
+            myRow
+          }))
+                  
+          rbind(mergeCN(subset(cnAll, sample!="met"), 500000), myDf)
+        }
+        else mergeCN(cnAll, 500000)
+      }
+    )
+  )
+```
+
+
+```{r, message=F, warning=F}
+#Read table of nodes
+resultFiles <- dir("./", "tree_final.xml", recursive=T, full.names=T)
+resultFiles <- grep("TEST", resultFiles, invert =T, value=T)
+copy_number.df <- do.call("rbind", lapply(resultFiles, function(myFile){
+  #Read XML
+  doc <- xmlTreeParse(myFile)  
+  print(myFile)
+  #Loop across nodes
+    do.call("rbind", 
+      lapply(
+        xmlElementsByTagName(doc$doc$children[[1]], "sequence", recursive =T), 
+        function(el){
+          myAcc <- as.character(unlist(xmlElementsByTagName(el, "accession")[[1]])[4])
+          myArr <- strsplit(myAcc, "_")[[1]]
+          myArr <- myArr[-length(myArr)]
+          myAcc <- paste(myArr, collapse="_")    
+          symbol =  as.character(unlist(xmlElementsByTagName(el, "symbol")[[1]])[3])
+          sequence <- as.character(unlist(xmlElementsByTagName(el, "name")[[1]])[3])    
+
+          #split sequences
+          sequence.chr <- strsplit(sequence, "X")[[1]]
+          namesSeq <- c(1:22, "X", "Y")
+          
+          #fill missing chromosomes
+          if(length(grep("167", myFile)) > 0) names(sequence.chr) <- namesSeq[-c(1,7,8)]
+          else if(length(grep("179", myFile)) > 0) names(sequence.chr) <- namesSeq[-24]
+          else if(length(grep("177", myFile)) > 0) names(sequence.chr) <- namesSeq[-8]
+          else if(length(grep("498", myFile)) > 0) names(sequence.chr) <- namesSeq[-c(10, 18)]
+          else names(sequence.chr) <- namesSeq
+          
+          #loop achross chromosomes
+          do.call("rbind", lapply(1:length(sequence.chr), function(i){
+            nodeDf <- 
+              data.frame(
+                patient = strsplit(myFile, "/")[[1]][3],
+                node = myAcc,
+                allele = symbol,
+                chr = names(sequence.chr)[i],
+                sequence = sequence.chr[i]
+              )
+          }))
+        }
+      )
+    )
+  
+}))
+copy_number.df$sequence <- as.character(copy_number.df$sequence)
+
+#Convert sequence in mapped fragments
+cn <- 
+  do.call("rbind", 
+    lapply(
+      1:dim(copy_number.df)[1], 
+      function(i){
+        myRow <- copy_number.df[i,]
+        myCoord <- 
+          cnAll.merged[
+              cnAll.merged$patient == myRow$patient & 
+              cnAll.merged$chr == myRow$chr,
+            c("sample", "alleleStart", "alleleEnd")
+          ]
+        myCoord <- myCoord[myCoord$sample == myCoord$sample[1],c("alleleStart", "alleleEnd")]
+        myDf <- data.frame(myRow, strsplit(myRow$sequence, ""), myCoord)
+        colnames(myDf)[dim(myDf)[2]-2] <- "cn"
+        
+        myDf
+      }
+    )
+  )
+
+#Put exception for 299 Metastasis since it didn't go through phylogeny
+myTemp_cnAll.merged <- subset(cnAll.merged, patient==299 & sample=="met")
+cn <- rbind(cn ,
+  do.call("rbind", 
+          lapply(
+            1:dim(myTemp_cnAll.merged)[1], 
+            function(i){
+              myRow <- myTemp_cnAll.merged[i,]
+              rbind(
+                data.frame(patient = myRow$patient, node = "met", allele = "A", chr = myRow$chr, sequence = NA, cn = myRow$nAraw, alleleStart = myRow$alleleStart, alleleEnd = myRow$alleleEnd),
+                data.frame(patient = myRow$patient, node = "met", allele = "B", chr = myRow$chr, sequence = NA, cn = myRow$nBraw, alleleStart = myRow$alleleStart, alleleEnd = myRow$alleleEnd)
+              )
+            }
+          )
+  )
+)
+```
+
+## Create CN table
+
+```{r, message=F, warning=F}
+#format cn
+cn$cn <- as.numeric(as.character(cn$cn))
+cn$node <- sapply(as.character(cn$node), function(n) gsub("?(X[0-9]{3})", "", n))
+
+#internal_2, internal_1
+tree <- read.newick("001/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "001" & node == "internal_1", select=c(allele,cn, chr, alleleStart, alleleEnd))
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "001" & node == "diploid", select=cn))))
+cn.pure <- data.frame(myCnProfile, type="ce", patient="001")
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "001" & node == "internal_2", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "001" & node == "internal_1", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="bm", patient="001"))
+
+
+#167L. internal_4, internal_1
+tree <- read.newick("167/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "167" & node == "internal_1", select=c(allele,cn, chr, alleleStart, alleleEnd))
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "167" & node == "diploid", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="167"))
+
+#Add first extra prostatic node
+myCnProfile <- subset(cn, patient == "167" & node == "internal_4", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "167" & node == "internal_1", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="167"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "167" & node == "L", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "167" & node == "internal_4", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="lm", patient="167"))
+
+
+#internal_2, 177iM
+tree <- read.newick("177/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first invasive node 
+#myCnProfile <- subset(cn, patient == "177" & node == "internal_2", select=c(allele,cn, chr, alleleStart, alleleEnd))
+#cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="177"))
+
+#Add met node
+myCnProfile <- subset(cn, patient == "177" & node == "iM", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "177" & node == "iM", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="bm", patient="177"))
+
+#internal_1, internal_5, 179L
+tree <- read.newick("179/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "179" & node == "internal_3", select=c(allele,cn, chr, alleleStart, alleleEnd))
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "179" & node == "diploid", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="179"))
+
+#Add first extra prostatic node
+myCnProfile <- subset(cn, patient == "179" & node == "internal_5", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "179" & node == "internal_3", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="179"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "179" & node == "L", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "179" & node == "internal_5", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="lm", patient="179"))
+
+
+#met, 299F, internal_3
+tree <- read.newick("299/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "299" & node == "internal_3", select=c(allele,cn, chr, alleleStart, alleleEnd))
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "299" & node == "diploid", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="299"))
+
+#Add first extra prostatic node
+myCnProfile <- subset(cn, patient == "299" & node == "F", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "299" & node == "internal_3", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="299"))
+
+#Add first metastatic node
+#myCnProfile <- subset(cn, patient == "299" & node == "met", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+#myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "299" & node == "K", select=cn))))
+#cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="bm", patient="299"))
+
+
+#internal_2, internal_4, 421L
+tree <- read.newick("421/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "421" & node == "internal_2", select=c(allele,cn, chr, alleleStart, alleleEnd))
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "421" & node == "diploid", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="421"))
+
+#Add first extra prostatic node
+myCnProfile <- subset(cn, patient == "421" & node == "internal_4", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "421" & node == "internal_2", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="421"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "421" & node == "L", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "421" & node == "internal_4", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="lm", patient="421"))
+
+
+#internal_1, internal_5
+tree <- read.newick("498/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "498" & node == "internal_1", select=c(allele,cn, chr, alleleStart, alleleEnd))
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "498" & node == "diploid", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="498"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "498" & node == "internal_5", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+myCnProfile$cn <- myCnProfile$cn - as.numeric(as.character(unlist(subset(cn, patient == "498" & node == "internal_1", select=cn))))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="bm", patient="498"))
+
+#sum copies for each sample
+cn.pure.mean <- aggregate(cn ~ chr + alleleStart + alleleEnd + type + patient, cn.pure, sum)
+
+#Mix cancer grades
+mergeCN_from_nodes_across_trees <- function(cnAll, cutoff){
+  #Adapt column name for historical reasons
+  colnames(cnAll)[colnames(cnAll) %in% c("alleleStart", "alleleEnd")] = c("startpos", "endpos") 
+  
+  alleles <- data.frame()
+  for (chr in unique(cnAll$chr)){
+    myCn <- cnAll[cnAll$chr==chr,]
+    mySamples <- unique(paste(myCn$patient, myCn$type))
+    starts <- sort(unique(myCn$startpos))
+    
+    #loop alleles
+    myAlleles <- do.call("rbind", lapply(1:length(starts), function(s){
+      if(dim(myCn[myCn$startpos<=starts[s] & myCn$endpos>=starts[s],])[1] == length(mySamples)) {
+        #copy in temporary allele table
+        data.frame(
+          alleleStart=starts[s], 
+          alleleEnd=starts[s+1], 
+          myCn[myCn$startpos<=starts[s] & myCn$endpos>=starts[s],]
+        )   
+      } 
+    }))
+
+    maxEnd <- unique(max(myAlleles$endpos))
+    
+    #this if is because some chromosomes have length 1
+    if(length(is.na(myAlleles$alleleEnd))>0) myAlleles[is.na(myAlleles$alleleEnd),"alleleEnd"] <- maxEnd
+    #eliminate short (< 500.000bp) fragments
+    myAlleles <- myAlleles[myAlleles$alleleEnd - myAlleles$alleleStart > cutoff,]
+    
+    #copy in main allele table
+    alleles <- rbind(alleles, myAlleles)
+  }
+
+  return(alleles)
+}
+
+#Get shared consistent genome regions
+cn.pure.mean.merged <- mergeCN_from_nodes_across_trees(cn.pure.mean, 500000)
+cn.pure.mean.merged$type <- factor(cn.pure.mean.merged$type, levels=c("ce", "ex", "lm", "bm"))
+
+skip_redundant <- function(chr){
+  myDf <- cn.pure.mean.merged[cn.pure.mean.merged$chr==chr,]
+  myDf <- myDf[order(myDf$alleleStart, myDf$patient, myDf$type),]
+  myPos <- unique(myDf$alleleStart)
+  j = 0
+  myDf.nr <- data.frame()
+  for(i in 1:length(myPos)){
+    myCn <- subset(myDf, alleleStart==myPos[i], select="cn")
+    nextCn <- subset(myDf, alleleStart==myPos[i+1], select="cn")
+    if(dim(nextCn)[1] == 0) break
+    if(any(myCn - nextCn != 0)) {
+      myReturn <- subset(myDf, alleleStart==myPos[i])
+      myReturn$alleleStart <- myPos[i - j]
+      j = 0
+      myDf.nr <- rbind(myDf.nr, myReturn)
+    }
+    else j = j + 1
+  }
+  myDf.nr
+}
+
+cn.pure.mean.merged.nr <- 
+  do.call("rbind", lapply(unique(cn.pure.mean.merged$chr), function(chr) skip_redundant(chr)))
+cn.pure.mean.merged.nr$type <- factor(cn.pure.mean.merged.nr$type, levels=c("ce", "ex", "lm", "bm"))
+```
+
+## CN test
+
+```{r, message=F, warning=F}
+#Analyze if there are difference in copy number across the genome across cancer types
+aov_significance <- 
+  as.data.frame(matrix(unlist(
+    apply(
+      unique(subset(cn.pure.mean.merged.nr, select=c("chr", "alleleStart", "alleleEnd"))), 
+      1, 
+      function(pos){
+         myDf <- 
+           subset(
+             cn.pure.mean.merged.nr, 
+             chr == pos[1] & alleleStart == as.numeric(pos[2]) & 
+             alleleEnd == as.numeric(pos[3])
+            )
+         
+         dist_across_type <- sum(dist(aggregate(cn ~ type, myDf, mean)))
+
+         if(sum(abs(myDf$cn)) == 0) {
+               myP = 1
+               class = NA
+               cn = NA
+           }
+         else {
+               my.aov <- aov(cn ~ type, data=myDf)
+               my.t <- TukeyHSD(x=my.aov, 'type', conf.level=0.95)
+               
+               myP = summary(my.aov)[[1]][["Pr(>F)"]][1]
+               myF = summary(my.aov)[[1]][["F value"]][1]
+               class = as.character(paste(rownames(my.t$type)[order(my.t$type[,4])], collapse="_"))
+               cn = paste(apply(aggregate(.~type, data=myDf[,c("type", "cn")], mean), 1, function(rr){paste(rr, collapse=" ")}), collapse=";")
+             }
+         as.vector(c(pos, dist_across_type, myP, myF, class, cn)   )
+     })),ncol = 8, byrow=T))
+colnames(aov_significance) <- c("chr", "alleleStart", "alleleEnd", "dist_across_type", "p_value", "f_value", "class", "cn")
+aov_significance$p_value <- as.numeric(as.character(aov_significance$p_value))
+aov_significance$dist_across_type <- as.numeric(as.character(aov_significance$dist_across_type))
+
+#filter first half of rank
+aov_significance <- aov_significance[order(aov_significance$dist_across_type, decreasing=T), ]
+half_size <- dim(aov_significance)[1]/10
+aov_significance <- aov_significance[1:half_size, ]
+
+#Calculate adjusted value
+aov_significance$p_value.adj <- p.adjust(aov_significance$p_value, method = "BH")
+
+#None of the regions passed the multitest correction, so we rank the genimic regions and get the genes
+
+#count oncogenes/suppressors
+library(GenomicRanges)
+library(rtracklayer)
+library(plyr)
+#Import oncogenes http://bioinfoblog.it/2015/03/the-network-of-cancer-genes-database/
+oncogenes <- read.csv("/wehisan/home/allstaff/m/mangiola.s/lymphNode_study/download_query.txt")
+
+session <- browserSession()
+trackName <- "refGene"
+tableName <- "refGene"
+ucscTable <- getTable(ucscTableQuery(session, track=trackName, table=tableName))
+
+mySignificantRegions <- aov_significance[order(aov_significance$p_value),]
+write.csv(mySignificantRegions, file="mySignificantRegions.csv")
+
+#Mark plot with significance
+tmp <- unlist(apply(subset(mySignificantRegions, p_value<0.1, select=c("chr", "alleleStart")), 1, function(r) paste(as.numeric(unlist(r)), collapse ="_")))
+cn.pure.mean.merged.nr_4_plot <- do.call("rbind", lapply(1:dim(cn.pure.mean.merged.nr)[1], function(i){
+  r <- cn.pure.mean.merged.nr[i,]
+  if(paste(as.numeric(unlist(r[c("chr", "alleleStart")])), collapse ="_") %in% tmp) 
+    data.frame(r, DE=5)
+  else 
+    data.frame(r, DE=0)
+}))
+
+```
+
+## Plot CN density
+
+```{r, message=F, warning=F}
+ggplot(cn.pure.mean.merged.nr_4_plot, aes(x=alleleStart, y=cn, group=factor(type), color=factor(type), fill=factor(type))) +  
+  stat_smooth(method="loess", span=0.2) +
+  scale_fill_manual(values=c("#27ae60", "#ff9900", "#c0392b", "black")) + 
+  scale_colour_manual(values=c("#27ae60", "#ff9900", "#c0392b", "black"))+ 
+  geom_bar(aes(x=alleleStart, y=DE), stat="identity",position = "identity", colour="lightblue", width=5, alpha=0.2) +
+  facet_grid(type ~ chr, space="free", scale="free_x") + 
+  theme_bw() +
+  theme(axis.line.x=element_blank(),axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.x=element_blank(),
+        panel.background=element_blank(),
+        panel.border=element_blank(),
+        #panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),
+        plot.background=element_blank())  +
+  scale_y_continuous(breaks=seq(-2, 2, 0.5)) +
+  scale_x_continuous(breaks = NULL)
+```
+
+## Annotate differentially appmplified/deleted regions
+
+```{r, message=F, warning=F}
+
+clus <- makeCluster(10)
+clusterExport(clus,"mySignificantRegions")
+clusterExport(clus,"ucscTable")
+clusterExport(clus,"oncogenes")
+clusterExport(clus,"filter")
+
+myGeneInFragments <- do.call("rbind.fill", lapply(
+    1: dim(mySignificantRegions)[1], function(idx) {
+    myRow <- mySignificantRegions[idx, ]
+    myStart = as.numeric(as.character(unlist(myRow$alleleStart)))
+    myEnd = as.numeric(as.character(unlist(myRow$alleleEnd)))
+    myChr = as.numeric(as.character(unlist(myRow$chr)))
+    myGenes <- ucscTable[
+    gsub("chr", "", ucscTable$chrom) == myChr & (
+    (ucscTable$txStart >= myStart & ucscTable$txStart <= myEnd) | (ucscTable$txEnd >= myStart & ucscTable$txEnd <= myEnd) | (ucscTable$txStart <= myStart & ucscTable$txEnd >= myEnd)), "name2"]
+    p_value = as.numeric(as.character(unlist(myRow$p_value)))
+    f_value = as.numeric(as.character(unlist(myRow$f_value)))
+    p_value.adj = as.numeric(as.character(unlist(myRow$p_value.adj)))
+
+    oncogenesInfo <- data.frame(NA)
+    if(dim(subset(oncogenes, symbol %in% myGenes))[1]>0) oncogenesInfo <- subset(oncogenes, symbol %in% myGenes)
+    data.frame(
+      chr = myChr,
+      start.region = myStart, 
+      class = myRow$class,
+      allGenes = paste(myGenes, collapse=";"),
+      cn=myRow$cn,
+      oncogenesInfo,
+      p_value,      
+      p_value.adj,
+      f_value
+    )  
+}))
+
+write.csv(myGeneInFragments, file="oncogenes_in_top_ALL_regions.csv")
+
+```
+
+## Analysis similarity bone ymph node metastasis
+
+```{r, message=F, warning=F}
+
+#internal_2, internal_1
+tree <- read.newick("001/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "001" & node == "internal_1", select=c(allele,cn, chr, alleleStart, alleleEnd))
+cn.pure <- data.frame(myCnProfile, type="ce", patient="001")
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "001" & node == "internal_2", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="bm", patient="001"))
+
+
+#167L. internal_4, internal_1
+tree <- read.newick("167/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "167" & node == "internal_1", select=c(allele,cn, chr, alleleStart, alleleEnd))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="167"))
+
+#Add first extra prostatic node
+myCnProfile <- subset(cn, patient == "167" & node == "internal_4", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="167"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "167" & node == "L", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="lm", patient="167"))
+
+
+#internal_2, 177iM
+tree <- read.newick("177/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add met node
+myCnProfile <- subset(cn, patient == "177" & node == "iM", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="bm", patient="177"))
+
+#internal_1, internal_5, 179L
+tree <- read.newick("179/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "179" & node == "internal_3", select=c(allele,cn, chr, alleleStart, alleleEnd))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="179"))
+
+#Add first extra prostatic node
+myCnProfile <- subset(cn, patient == "179" & node == "internal_5", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="179"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "179" & node == "L", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="lm", patient="179"))
+
+
+#met, 299F, internal_3
+tree <- read.newick("299/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "299" & node == "internal_3", select=c(allele,cn, chr, alleleStart, alleleEnd))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="299"))
+
+#Add first extra prostatic node
+myCnProfile <- subset(cn, patient == "299" & node == "F", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="299"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "299" & node == "met", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="bm", patient="299"))
+
+
+#internal_2, internal_4, 421L
+tree <- read.newick("421/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "421" & node == "internal_2", select=c(allele,cn, chr, alleleStart, alleleEnd))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="421"))
+
+#Add first extra prostatic node
+myCnProfile <- subset(cn, patient == "421" & node == "internal_4", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ex", patient="421"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "421" & node == "L", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="lm", patient="421"))
+
+
+#internal_1, internal_5
+tree <- read.newick("498/mediccOut/tree_final.new")
+plot(tree)
+nodelabels(tree$node.label)
+
+#Add first central node
+myCnProfile <- subset(cn, patient == "498" & node == "internal_1", select=c(allele,cn, chr, alleleStart, alleleEnd))
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="ce", patient="498"))
+
+#Add first metastatic node
+myCnProfile <- subset(cn, patient == "498" & node == "internal_5", select=c(allele,cn, chr, alleleStart, alleleEnd)) 
+cn.pure <- rbind(cn.pure, data.frame(myCnProfile, type="bm", patient="498"))
+
+#sum copies for each sample
+cn.pure.mean <- aggregate(cn ~ chr + alleleStart + alleleEnd + type + patient, cn.pure, sum)
+
+#Get shared consistent genome regions
+cn.pure.mean.merged <- mergeCN_from_nodes_across_trees(cn.pure.mean, 500000)
+
+cn.pure.mean.merged.nr <- 
+  do.call("rbind", lapply(unique(cn.pure.mean.merged$chr), function(chr) skip_redundant(chr)))
+cn.pure.mean.merged.nr$type <- factor(cn.pure.mean.merged.nr$type, levels=c("ce", "ex", "lm", "bm"))
+
+myMelt4MDS <- cn.pure.mean.merged.nr
+myMelt4MDS <- subset(myMelt4MDS, !(type %in% c("ce", "lm", "ex") & patient %in% c("001", "177", "299", "498")) )
+myMelt4MDS <- cast(myMelt4MDS, alleleStart + chr ~ type, mean)
+
+plotMDS(myMelt4MDS[,-c(1,2)], labels=colnames(myMelt4MDS[,-c(1,2)]), pch=19)
+```
+
+##Validation
+
+
+```{r}
+
+#loading gene info
+library("org.Hs.eg.db")
+
+entrez2symbol <- melt(as.list(org.Hs.egSYMBOL))
+names(entrez2symbol) <- c("symbol", "entrez")
+entrez2location <- melt(as.list(org.Hs.egCHRLOC))
+names(entrez2location) <- c("location", "entrez")
+entrez2chr <- melt(as.list(org.Hs.egCHR))
+names(entrez2chr) <- c("chr", "entrez")
+  
+  
+entrez2otherInfo <- 
+  Reduce(
+    function(...) merge(..., by="entrez", all=T), 
+    list(
+      entrez2symbol, 
+      entrez2chr,
+      entrez2location
+    )
+  )
+
+cnAll <- rbind(cnAll167, cnAll179, cnAll421)
+ 
+mlpa2cn <- function(myMLPAmeltedTable){
+  #column one sample name
+  #column 2 symbol
+  return(
+    do.call("c", lapply(1:dim(myMLPAmeltedTable)[1], function(idx){
+      row = myMLPAmeltedTable[idx,]
+      mySymbol = gsub("References ", "", row[,2])
+      mySymbol = strsplit(mySymbol, "-", fixed = T)[[1]][1]
+      mySymbol = gsub("References.", "", mySymbol)
+      mySymbol = strsplit(mySymbol, ".", fixed = T)[[1]][1]
+      location = unique(entrez2otherInfo[entrez2otherInfo$symbol == mySymbol, ])
+      #check for duplicates
+      if(dim(location)[1]==1) {    
+        copies = cnAll[
+            cnAll$sample == paste("X", row[,1], sep="") &
+            cnAll$chr == location$chr &
+            cnAll$startpos <= abs(location$location) &
+            cnAll$endpos >= abs(location$location),
+          ]
+        
+        if(dim(copies)[1] > 0) sum(copies[,c("nMajor", "nMinor")])
+        else NA
+      }
+      else NA
+    }))
+  )
+}
+
+cnAll <- rbind(cnAll167, cnAll179, cnAll421)
+tumorPurity <- read.csv("tumorPurity.csv", stringsAsFactors=FALSE)
+mlpaDF_all <- read.csv("MLPA Tumourloss Samples - final ratios - all.csv", stringsAsFactors=FALSE)
+
+
+#eliminate outlier 167E
+mlpaDF_all <- mlpaDF_all[mlpaDF_all$Sample != "167E",]
+
+mlpaDF_all$Height <- as.numeric(mlpaDF_all$Height)
+
+#rename probes
+mlpaDF_all$symbol <- 
+  do.call(
+    "c", 
+    lapply(strsplit(mlpaDF_all$X, "[.]", perl=TRUE), function(x) x[2])
+  )
+mlpaDF_all$symbol <- 
+  do.call(
+    "c", 
+    lapply(strsplit(mlpaDF_all$symbol, "[*]", perl=TRUE), function(x) x[1])
+  )
+mlpaDF_all$symbol <- 
+  do.call(
+    "c", 
+    lapply(gsub( "[", "", mlpaDF_all$symbol, fixed=TRUE), function(x) x[1])
+  )
+mlpaDF_all$symbol <- 
+  do.call(
+    "c", 
+    lapply(gsub( "]", "", mlpaDF_all$symbol, fixed=TRUE), function(x) x[1])
+  )
+mlpaDF_all$symbol[grep("References", mlpaDF_all$X)] <- 
+  paste("References", mlpaDF_all$symbol[grep("References", mlpaDF_all$X)] , sep=" ")
+#mlpaDF_all$snpCn <- mlpa2cn(mlpaDF_all[,c("Sample", "symbol")])
+
+#make probe info table because is needed
+probeInfo <- unique(mlpaDF_all[, c("symbol", "Probe.target.info")])
+probeLength.df <- read.csv("probeLength.csv", stringsAsFactors=FALSE)
+probeInfo$length <- 
+  probeLength.df$Length[match(
+    probeInfo$Probe.target.info, 
+    probeLength.df$Mapview
+  )]
+
+
+#non corrected
+myHeight = "Height"
+mlpaDF_all.table <- 
+    data.frame(cast(mlpaDF_all[,c("Sample", "symbol", myHeight)], Sample ~ symbol, fun.aggregate=mean))
+rownames(mlpaDF_all.table) <- mlpaDF_all.table$Sample
+mlpaDF_all.table <- mlpaDF_all.table[,colnames(mlpaDF_all.table) != "Sample"]
+mlpaDF_all.table <- data.frame(id=rownames(mlpaDF_all.table), replicate = 1, mlpaDF_all.table)  
+#establish controls and probe lengths
+probes.control <- grep("References", colnames(mlpaDF_all.table))
+probes.length <- probeInfo$length[match(colnames(mlpaDF_all.table)[-c(1:2)], gsub("-", ".", gsub(" ", ".",probeInfo$symbol)))]    
+#divide in control and test tables
+#set control samples
+controlSamples <- c("167b", "179B", "421A")  
+includePatients <- c("167", "179", "421")
+#eliminate167
+controlSamples <- c("167b", "179B", "421A")  
+includePatients <- c("167", "179", "421")
+
+
+control.table = 
+  mlpaDF_all.table[mlpaDF_all.table$id %in% controlSamples,]
+test.table = 
+  mlpaDF_all.table[!(mlpaDF_all.table$id %in% controlSamples),]   
+test.table = test.table[grep(paste(includePatients,collapse="|"), test.table$id),]
+
+
+mlpa.dat.NON.corrected <- setupMLPA(control.table, test.table, probes.length , probes.control)
+norm.dat.NON.corrected <-mlpaNorm(mlpa.dat.NON.corrected, method="slope.correction", reference.probes = FALSE) 
+
+
+#Calculate ratios
+norm.dat.NON.corrected.test_table <- norm.dat.NON.corrected$test.norm
+#colnames(norm.dat.NON.corrected.test_table) <- attr(attr(norm.dat.NON.corrected, "peaks"), "probes")
+rownames(norm.dat.NON.corrected.test_table) <- attr(attr(norm.dat.NON.corrected, "peaks"), "extra.info.test")$id
+norm.dat.NON.corrected.control_table <- norm.dat.NON.corrected$control.norm
+norm.dat.NON.corrected.myRatios <- t( apply(norm.dat.NON.corrected.test_table, 1, function(myRow){
+  myRow/norm.dat.NON.corrected.control_table
+}))
+
+
+
+plot(density(norm.dat.NON.corrected.myRatios, kernel="g", width=0.2, na.rm=T), main="Corrected height")
+
+#predict mlpa copies
+norm.dat.NON.corrected.myRatios.melted <- melt(norm.dat.NON.corrected.myRatios)
+norm.dat.NON.corrected.myRatios.melted$snpCn <- mlpa2cn(norm.dat.NON.corrected.myRatios.melted)
+norm.dat.NON.corrected.myRatios.melted <- na.omit(norm.dat.NON.corrected.myRatios.melted)
+norm.dat.NON.corrected.myRatios.melted$mlpaCn.genomeStudio <- mlpaDF_all$Final.ratio[
+  match(
+    paste(
+      norm.dat.NON.corrected.myRatios.melted$X1, 
+      norm.dat.NON.corrected.myRatios.melted$X2
+    ), 
+    paste(
+      mlpaDF_all$Sample,
+      gsub("-| ", ".", mlpaDF_all$symbol)
+    )
+  )
+]
+
+norm.dat.NON.corrected.myRatios.melted$mlpaCn <- NA
+norm.dat.NON.corrected.myRatios.melted$mlpaCn <- unlist(apply(
+norm.dat.NON.corrected.myRatios.melted, 1, function(myRow){
+  tp = tumorPurity[sub("X", "", tumorPurity$samples) ==as.character(unlist(myRow[1])), "purity"]
+  ploidy <- tumorPurity[sub("X", "", tumorPurity$samples) == as.character(unlist(myRow[1])), "ploidy"]
+  myVar <- 0.1
+  myRatio <- myRow[3]
+  ###########################
+  #calculate ratio normal way
+  ###########################
+  
+  thresholds <- list(c(0, 0.25), c(0.35, 0.65), c(0.85, 1.15), c(1.35, 1.55), c(1.56))
+  
+  ###########################
+  #correction purity
+  ###########################
+  
+  #thresholds = list(
+  #  c(((((1-tp)*2)+(tp*0))/2)-myVar, ((((1-tp)*2)+(tp*0))/2)+myVar), 
+  #  c(((((1-tp)*2)+(tp*1))/2)-myVar, ((((1-tp)*2)+(tp*1))/2)+myVar), 
+  #  c(((((1-tp)*2)+(tp*2))/2)-myVar, ((((1-tp)*2)+(tp*2))/2)+myVar), 
+  #  c(((((1-tp)*2)+(tp*3))/2)-myVar, ((((1-tp)*2)+(tp*3))/2)+myVar), 
+  #  c(((((1-tp)*2)+(tp*4))/2)-myVar)
+  #)
+
+  ###########################
+  #correction ploidy
+  ###########################
+
+  thresholds = lapply(thresholds, function(arr) {arr - (((ploidy - 2) * 1 / 2))})
+
+  ###########################
+  #genome studio
+  ###########################
+
+  #thresholds = list(c(0, 0.2), c(0.4, 0.65), c(0.8, 1.2), c(1.3, 1.65),   c(1,75)  )
+  #myRatio <- myRow[5]
+  
+  ###########################
+  ###########################
+if(myRatio >= thresholds[[1]][1] & myRatio <= thresholds[[1]][2]) {0 }
+else if(myRatio >= thresholds[[2]][1] & myRatio <= thresholds[[2]][2]){1}
+else if(myRatio >= thresholds[[3]][1] & myRatio <= thresholds[[3]][2]) {2} 
+else if(myRatio >= thresholds[[4]][1] & myRatio <= thresholds[[4]][2]) {3} 
+else if(myRatio >= thresholds[[5]][1]){4} 
+else {NA}
+}))
+
+#norm.dat.NON.corrected.myRatios.melted <- norm.dat.NON.corrected.myRatios.melted[norm.dat.NON.corrected.myRatios.melted$snpCn == 2, ]
+
+norm.dat.NON.corrected.myRatios.melted<- na.omit(norm.dat.NON.corrected.myRatios.melted)
+  
+#calculate performances
+#length(which(norm.dat.NON.corrected.myRatios.melted$mlpaCn == norm.dat.NON.corrected.myRatios.melted$snpCn))/dim(na.omit(norm.dat.NON.corrected.myRatios.melted))[1]
+#t(table(data.frame(validated = norm.dat.NON.corrected.myRatios.melted$mlpaCn == norm.dat.NON.corrected.myRatios.melted$snpCn, sample =  substr(norm.dat.NON.corrected.myRatios.melted$X1, 1, 3))))
+#direction
+norm.dat.NON.corrected.myRatios.melted$snpCn.verse [norm.dat.NON.corrected.myRatios.melted$snpCn <2] <- -1
+norm.dat.NON.corrected.myRatios.melted$snpCn.verse [norm.dat.NON.corrected.myRatios.melted$snpCn >2] <- 1
+norm.dat.NON.corrected.myRatios.melted$snpCn.verse [norm.dat.NON.corrected.myRatios.melted$snpCn ==2] <- 0
+norm.dat.NON.corrected.myRatios.melted$mlpaCn.verse [norm.dat.NON.corrected.myRatios.melted$mlpaCn <2] <- -1
+norm.dat.NON.corrected.myRatios.melted$mlpaCn.verse [norm.dat.NON.corrected.myRatios.melted$mlpaCn >2] <- 1
+norm.dat.NON.corrected.myRatios.melted$mlpaCn.verse [norm.dat.NON.corrected.myRatios.melted$mlpaCn ==2] <- 0
+
+#how many probes have same direction?
+length(which(norm.dat.NON.corrected.myRatios.melted$mlpaCn.verse == norm.dat.NON.corrected.myRatios.melted$snpCn.verse ))/dim(na.omit(norm.dat.NON.corrected.myRatios.melted))[1]
+t(table(data.frame(validated = norm.dat.NON.corrected.myRatios.melted$mlpaCn.verse == norm.dat.NON.corrected.myRatios.melted$snpCn.verse, sample =  substr(norm.dat.NON.corrected.myRatios.melted$X1, 1, 3))))
+
+
+```
